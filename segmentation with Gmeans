@@ -19,9 +19,6 @@ print(SR)
 var img0 = SR0.select(['B1', 'B2','B3', 'B4']).toBands();
 var img = SR.select(['B1', 'B2','B3', 'B4']).toBands().unmask(img0).unmask(0);
 print(img)
-var visParams = {bands: ['B3', 'B2', 'B1'],min: 0, max: 3000};
-var SR2019 = SR.filterDate('2019-06-01', '2019-09-30').first().clip(roi);
-Map.addLayer(SR2019,visParams,'2012年mask真彩色影像');
 
 //Gmeans Segmentation
 var inputGmeans0 = {image:img, numIterations:10, pValue:50, neighborhoodSize:60}
