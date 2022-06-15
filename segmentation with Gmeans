@@ -1,0 +1,69 @@
+var GY = ee.FeatureCollection("users/Landtrendr/GY").geometry();
+
+//patchLT
+var ltgee = require('users/emaprlab/public:Modules/LandTrendr.js');
+
+var startYear = 2000;
+var endYear = 2020;
+var startDay = '06-01'; 
+var endDay = '09-30';
+var aoi = roi;
+var mask0 = [];
+var mask = ['cloud', 'shadow'];
+
+Map.centerObject(aoi,13);
+//SR0为原始影像合成，SR为去噪（云、阴影...）影像合成
+var SR0 = ltgee.buildSRcollection(startYear, endYear, startDay, endDay, aoi, mask0);
+var SR = ltgee.buildSRcollection(startYear, endYear, startDay, endDay, aoi, mask);
+print(SR)
+var img0 = SR0.select(['B1', 'B2','B3', 'B4']).toBands();
+var img = SR.select(['B1', 'B2','B3', 'B4']).toBands().unmask(img0).unmask(0);
+print(img)
+var visParams = {bands: ['B3', 'B2', 'B1'],min: 0, max: 3000};
+var SR2019 = SR.filterDate('2019-06-01', '2019-09-30').first().clip(roi);
+Map.addLayer(SR2019,visParams,'2012年mask真彩色影像');
+
+//Gmeans Segmentation
+var inputGmeans0 = {image:img, numIterations:10, pValue:50, neighborhoodSize:60}
+var inputGmeans1 = {image:img, numIterations:10, pValue:50, gridSize:0}
+var Gmeans0 = ee.Algorithms.Image.Segmentation.GMeans(inputGmeans0);
+print('Gmeans cluster',Gmeans0)
+Map.addLayer(Gmeans0.randomVisualizer(), {}, 'Gmeans');
+
+//Connected pixel
+var smooth_Gmeans = Gmeans0.focalMode({
+    radius: 3, kernelType: 'square', units: 'pixels', iterations: 2})
+
+Map.addLayer(smooth_Gmeans.randomVisualizer(), {}, 'smooth_Gmeans');
+var Size = Gmeans0.connectedPixelCount({
+    maxSize: 60
+  });
+var mmu = Size.gte(10);
+var Gmeans = Gmeans0.updateMask(mmu).unmask(smooth_Gmeans).clip(GY);
+// Map.addLayer(mmu, {}, 'mmu');
+Map.addLayer(Gmeans.randomVisualizer(), {}, 'Gmeans2');
+var obj = Gmeans.connectedComponents({
+  connectedness: ee.Kernel.square(1),//4邻域连通plus(1)//8邻域square(1)
+  maxSize: 300
+}).select('labels').rename('objID');
+print('obj_gmeans',obj)
+Map.addLayer(obj.randomVisualizer(), {}, 'obj_gmeans');
+
+
+Export.image.toAsset({
+  image: obj,
+  description: 'obj0',
+  assetId: 'obj0',
+  crs: 'EPSG:4326',
+  scale: 30,
+  region: roi
+});
+
+Export.image.toDrive({
+  image: Gmeans,
+  description: 'Gmeans',
+  folder: 'GY',
+  crs: 'EPSG:4326',
+  scale: 30,
+  region: GY
+});
