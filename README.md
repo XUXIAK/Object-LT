@@ -7,3 +7,5 @@ This is the code used in the article《Object-based change detection for vegetat
 
 Note: Figure 10 in the original article was removed by the editor after the article was ONLINE, I don't understand why he did it, but I think this figure is necessary to explain and prove the effectiveness of the Object-LT method. Figure 10 corresponds to the last paragraph of section 4.3.
 
+![image](Fig10.png)
+
